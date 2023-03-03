@@ -1,0 +1,241 @@
+4.
+
+import csv
+
+
+
+# read the csv file and store the data in a list of dictionaries
+
+vaccination_data = []
+
+with open('country_vaccination_stats.csv', 'r') as file:
+
+    reader = csv.DictReader(file)
+
+    for row in reader:
+
+        vaccination_data.append(row)
+
+
+
+# calculate the total vaccinations for each country
+
+total_vaccinations_by_country = {}
+
+for data in vaccination_data:
+
+    country = data['country']
+
+    vaccinations = int(data['daily_vaccinations'])
+
+    if country not in total_vaccinations_by_country:
+
+        total_vaccinations_by_country[country] = 0
+
+    total_vaccinations_by_country[country] += vaccinations
+
+
+
+# sort the countries by total vaccinations and get the top 5
+
+sorted_countries = sorted(total_vaccinations_by_country.items(), key=lambda x: x[1], reverse=True)
+
+top_5_countries = [country[0] for country in sorted_countries[:5]]
+
+
+
+# calculate the overall daily vaccination rate across all countries
+
+total_daily_vaccinations = sum([int(data['daily_vaccinations']) for data in vaccination_data])
+
+num_countries = len(total_vaccinations_by_country)
+
+overall_daily_vaccination_rate = total_daily_vaccinations / num_countries
+
+
+
+# calculate the daily vaccination rate for each country
+
+daily_vaccination_rate_by_country = {}
+
+for data in vaccination_data:
+
+    country = data['country']
+
+    vaccinations = int(data['daily_vaccinations'])
+
+    population = int(data['population'])
+
+    daily_vaccination_rate = vaccinations / population
+
+    daily_vaccination_rate_by_country[country] = daily_vaccination_rate
+
+
+
+# print the results
+
+print("Total vaccinations by country:")
+
+for country, total_vaccinations in total_vaccinations_by_country.items():
+
+    print(f"{country}: {total_vaccinations}")
+
+
+
+print("\nTop 5 countries by total vaccinations:")
+
+for country in top_5_countries:
+
+    print(country)
+
+
+
+print(f"\nOverall daily vaccination rate: {overall_daily_vaccination_rate:.2f}")
+
+
+
+print("\nDaily vaccination rate by country:")
+
+for country, daily_vaccination_rate in daily_vaccination_rate_by_country.items():
+
+    print(f"{country}: {daily_vaccination_rate:.6f}")
+
+
+
+5.
+
+import csv
+
+
+
+# read the csv file and store the data in a list of dictionaries
+
+vaccination_data = []
+
+with open('country_vaccination_stats.csv', 'r') as file:
+
+    reader = csv.DictReader(file)
+
+    for row in reader:
+
+        vaccination_data.append(row)
+
+
+
+# find the minimum daily vaccination number for each country
+
+min_daily_vaccinations_by_country = {}
+
+for data in vaccination_data:
+
+    country = data['country']
+
+    vaccinations = int(data['daily_vaccinations']) if data['daily_vaccinations'] else 0
+
+    if country not in min_daily_vaccinations_by_country:
+
+        min_daily_vaccinations_by_country[country] = vaccinations
+
+    else:
+
+        min_daily_vaccinations_by_country[country] = min(vaccinations, min_daily_vaccinations_by_country[country])
+
+
+
+# fill in missing data with the minimum daily vaccination number of relevant countries
+
+for data in vaccination_data:
+
+    country = data['country']
+
+    vaccinations = int(data['daily_vaccinations']) if data['daily_vaccinations'] else 0
+
+    if vaccinations == 0:
+
+        relevant_countries = [d['country'] for d in vaccination_data if d['date'] == data['date'] and d['daily_vaccinations']]
+
+        relevant_vaccinations = [min_daily_vaccinations_by_country[c] for c in relevant_countries if c in min_daily_vaccinations_by_country]
+
+        if relevant_vaccinations:
+
+            min_vaccinations = min(relevant_vaccinations)
+
+            data['daily_vaccinations'] = min_vaccinations
+
+
+
+# write the updated data to a new csv file
+
+fieldnames = ['country', 'date', 'daily_vaccinations', 'total_vaccinations', 'people_vaccinated', 'people_fully_vaccinated', 'daily_vaccinations_per_million', 'vaccines', 'source_name', 'source_website']
+
+with open('updated_country_vaccination_stats.csv', 'w', newline='') as file:
+
+    writer = csv.DictWriter(file, fieldnames=fieldnames)
+
+    writer.writeheader()
+
+    writer.writerows(vaccination_data)
+
+
+
+6.
+
+import csv
+
+
+
+# read the csv file and store the data in a list of dictionaries
+
+vaccination_data = []
+
+with open('updated_country_vaccination_stats.csv', 'r') as file:
+
+    reader = csv.DictReader(file)
+
+    for row in reader:
+
+        vaccination_data.append(row)
+
+
+
+# filter the data to only include entries from 1/6/2021
+
+data_01062021 = [data for data in vaccination_data if data['date'] == '1/6/2021']
+
+
+
+# calculate the total number of vaccinations for that day
+
+total_vaccinations_01062021 = sum([int(data['total_vaccinations']) if data['total_vaccinations'] else 0 for data in data_01062021])
+
+
+
+print(total_vaccinations_01062021)
+
+
+
+7.
+
+UPDATE country_vaccinations
+
+SET daily_vaccinations = (
+
+  SELECT DISTINCT 
+
+    PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY daily_vaccinations) OVER(PARTITION BY country)
+
+  FROM country_vaccinations t2
+
+  WHERE t2.country = country_vaccinations.country AND daily_vaccinations IS NOT NULL
+
+)
+
+WHERE daily_vaccinations IS NULL;
+
+
+
+UPDATE country_vaccinations
+
+SET daily_vaccinations = 0
+
+WHERE daily_vaccinations IS NULL;
